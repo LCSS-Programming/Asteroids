@@ -1,0 +1,250 @@
+#pos of screen moniter
+import os
+os.environ['SDL_VIDEO_WINDOW_POS']="0,35"
+#importing functions
+import pgzrun
+import random
+import math
+from math import sin, cos, pi, sqrt
+
+#making the screen
+WIDTH=1200
+HEIGHT=800
+
+#Defining global variables
+global highscore
+f = open('topastroids','r+')
+highscore=f.readline()
+global mode
+mode="title"
+global begin
+begin="Press J to Begin"
+global p
+p=.1
+global o
+o=.1
+global score
+score=0
+global q
+q=600
+global w
+w=100
+global turncount
+turncount=0
+global astspeed
+astspeed = 0.02
+global levelcount
+levelcount=0
+
+
+#array of astroids
+astroids=[]
+for x in range(0,10,1):
+    t=random.randint(700,1200)
+    y=random.randint(700,1200)
+    astroid=Actor('astroid')
+    astroid.pos=(t,y)
+    astroids.append(astroid)
+
+
+#counting the lasers
+global lasercount
+lasercount=0
+
+global ship_rad
+ship_rad=[0,0,0,0,0,0,0,0,0,0]
+
+#making the explosion
+boom=Actor('boom')
+
+#making ship
+ship=Actor('ship')
+ship.x=WIDTH/2
+ship.y=HEIGHT/2
+global ship_width
+ship_width=ship.midright[0]-ship.midleft[0]
+
+#making the lasers
+lasers=[]
+for x in range(0,10,1):
+    laser=Actor('laserblue16')
+    laser.left=ship.left
+    laser.top=10000
+    laser.angle+=90
+    lasers.append(laser)
+
+#drawing the screen, actors, etc.
+def draw():
+
+    #global variables
+    global levelcoount
+
+    global begin
+    
+    #drawing the screen
+    screen.fill((50,10,50))
+    #drawing the ship
+    ship.draw()
+
+    #drawing the astroids
+    for x in range(0,10,1):
+        astroids[x].draw()
+
+    #drawing the lasers
+    for x in range(0,10,1):
+        lasers[x].draw()
+
+    screen.draw.text(str(begin),(475,450),color=(2,225,225),fontsize=50)
+
+    #loss screen
+    if ship.image==("boom"):
+        screen.draw.text('You lose',(300,300),color=(2,225,225),fontsize=225)
+        screen.draw.text('Highscore:'+str(highscore),(WIDTH/2,700),color=(2,225,225),fontsize=50)
+
+    screen.draw.text('Score: '+str(score),(WIDTH/2,750),color=(2,225,225),fontsize=50)
+    screen.draw.text('Level: '+str(levelcount),(10,10),color=(2,225,225),fontsize=50)
+
+def calculate_direction(spd):
+
+    #global variables
+    global p
+    global o
+    global levelcount
+
+    levelcount+=1
+  
+    x=sqrt(spd)
+
+    p=x*random.uniform(-1,1)
+    o=math.pow((math.pow(x,2)-math.pow(p,2)),.5)
+    t=random.randint(1,2)
+    if t==1:
+        o=o/-1
+    else:
+        o=o/1
+
+def new_astroid():
+
+    #global variables
+    global whatone
+    
+    astroids[whatone].image="astroid"
+    astroids[whatone].left=random.randint(0,400)
+    astroids[whatone].top=random.randint(0,400)
+
+def update():#every 1/60th of a second
+
+    #global variables
+    global lasercount
+    global ship_rad
+    global score
+    global lifecounter
+    global p
+    global o
+    global turncount
+    global astspeed
+    global mode
+    global begin
+    
+    #astroids, lasers, and explosions
+    for n in range(0,10,1):
+        for m in range(0,10,1):
+            
+            #moving lasers and astroids
+            if mode=="play":
+                lasers[n].x=lasers[n].x+(10*sin(ship_rad[n]))
+                lasers[n].y=lasers[n].y+(10*cos(ship_rad[n]))
+            else:
+                lasers[n].x=lasers[n].x
+                lasers[n].y=lasers[n].y
+            if astroids[m].colliderect(ship):
+                ship.image=("boom")
+            elif ship.image==("boom"):
+                o=0
+                p=0
+            elif mode=="title":
+                o=0
+                p=0
+
+                #blowing up astroids
+            if lasers[n].colliderect(astroids[m]):
+                global whatone
+                whatone=m
+                astroids[m].image=('boom')
+                score=score+1
+                turncount+=1
+                lasers[n].pos=(10000,100000)
+                clock.schedule(new_astroid,0.1)
+
+            #turning the astroids
+            if turncount==10:
+                turncount=0
+                calculate_direction(astspeed)
+                astspeed=astspeed*2
+                
+            #Moving astroids up and down
+            astroids[m].top+=o
+            
+            #moving astroids left and right
+            astroids[m].left+=p
+            
+            #if astroids fo off left and right
+            if astroids[m].left>WIDTH:
+                astroids[m].left=0
+            if astroids[m].left<0:
+                astroids[m].left=WIDTH
+            if astroids[m].top>HEIGHT:
+                astroids[m].top=0
+            if astroids[m].top<0:
+                astroids[m].top=HEIGHT
+    
+    if ship.image=="boom":
+        t=0
+        high_score_screen()
+    else:
+        t=4
+
+    #rotating the ship
+    if keyboard.left:
+        ship.angle-=t
+    if keyboard.right:
+        ship.angle+=t
+
+def on_key_down(key):
+
+    #global variables
+    global lasercount
+    global turncount
+    global ship_width
+    global shiprad
+    global mode
+    global begin
+    
+    if (key==keys.F):
+        ship_rad[lasercount]=(ship.angle)*pi/180
+        lasers[lasercount].bottom=ship.top
+        lasers[lasercount].center=ship.center
+        lasers[lasercount].angle=ship.angle-90
+    lasercount+=1
+    if lasercount==10:
+        lasercount=0
+    if (key==keys.J):
+        mode="play"
+        begin=" "
+
+def high_score_screen():
+    
+    #global variables
+    global score
+    global highscore
+    
+    f = open('topastroids','r+')
+    s = str(score)
+    highscore=f.readline()
+    f.seek(0)
+    if f:
+        f.write(s)
+    f.close()
+
+
+pgzrun.go()#always at bottom
